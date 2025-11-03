@@ -1,0 +1,10 @@
+effect_spec_type: enumerate
+effects:
+    2-0:
+        type: baseline
+    1-1:
+        type: constant_mod_a
+        tau_map: {0: 2, 1: 1}
+    0-2:
+        type: constant
+        tau: 4

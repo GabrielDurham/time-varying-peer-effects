@@ -1,0 +1,3 @@
+attribute_type: rank
+rank_var: y
+quantiles: [0.5]

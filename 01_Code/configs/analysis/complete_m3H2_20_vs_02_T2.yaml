@@ -1,0 +1,17 @@
+ra_type: "complete"
+estimands:
+    estimand_0:
+        r1: "2-0"
+        r2: "0-2"
+        type: "tau_at"
+        a: "all"
+        t: "all"
+    estimand_1:
+        r1: "2-0"
+        r2: "0-2"
+        type: "tau_t"
+        t: "all"
+    estimand_2:
+        r1: "2-0"
+        r2: "0-2"
+        type: "tau"

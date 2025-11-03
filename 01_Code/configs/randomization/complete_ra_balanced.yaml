@@ -1,0 +1,4 @@
+ra_type: complete_ra
+m: 3
+balanced: True
+preferred_groups: [[3,0], [2,1], [1,2], [0,3]]
