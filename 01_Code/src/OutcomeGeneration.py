@@ -5,14 +5,20 @@
 ### PURPOSE: This code defines the OutcomeSimulator class, which handles outcome and causal effect simulation
 ### PROGRAMMER: Gabriel Durham (GJD)
 ### CREATED ON: 29 OCT 2025 
-
+### EDITS: 12 NOV 2025 (GJD) - Added rng argument for reproducibility
 
 import pandas as pd
 import numpy as np
+from numpy.random import default_rng
 
 
 class OutcomeSimulator:
-    def __init__(self, yaml_parms):
+    def __init__(self, yaml_parms, rng=None):
+        if rng is None:
+            self.rng = default_rng()
+        else:
+            self.rng = rng
+            
         self.y0_parms=yaml_parms["y0"]
         self.tau_parms=yaml_parms["tau"]
         self.y0_transition_type=self.y0_parms["outcome_transition_type"]
@@ -25,12 +31,14 @@ class OutcomeSimulator:
         
         # Create map for tau (causal effect) construction
         if self.effect_spec_type=="enumerate":
-            self.simulate_tau=self.simulate_tau_enumerate()
+            #self.simulate_tau=self.simulate_tau_enumerate()
+            self.simulate_tau=self.simulate_tau_enumerate
     
     # Simulate Y0 (baseline outcomes)
     def simulate_y0_noise(self, n):
         if self.error_structure["type"]=="normal":
-            noise=self.error_structure["sd"]*np.random.randn(n)
+            #noise=self.error_structure["sd"]*np.random.randn(n)
+            noise=self.error_structure["sd"]*self.rng.normal(size=n)
         return(noise)
     def simulate_y0_ar1(self, hist, t):
         if t==0:
@@ -46,25 +54,43 @@ class OutcomeSimulator:
     
     
     # Simulate tau (causal effects)
-    def simulate_tau_enumerate(self):
-        def simulate_tau(hist, t):
-            tau_df=pd.DataFrame(index=hist.index)
-            for r in self.tau_parms["effects"].keys():
-                r_parms=self.tau_parms["effects"][r]
-                # Baseline composition - No effect
-                if r_parms["type"]=="baseline":
-                    tau_df.loc[:,r]=0
-                # Constant effect
-                elif r_parms["type"]=="constant":
-                    tau_df.loc[:,r]=r_parms["tau"]
-                # Constant effect, moderated by attribute
-                elif r_parms["type"]=="constant_mod_a":
-                    A_t=hist.loc[:,"A_"+str(t)]
-                    tau_map=r_parms["tau_map"]
-                    # tau_map maps a's to taus
-                    tau_df.loc[:,r]=np.array([tau_map[a] for a in A_t])
-            return(tau_df)
-        return(simulate_tau)
+    def simulate_tau_enumerate(self, hist, t):
+        tau_df=pd.DataFrame(index=hist.index)
+        for r in self.tau_parms["effects"].keys():
+            r_parms=self.tau_parms["effects"][r]
+            # Baseline composition - No effect
+            if r_parms["type"]=="baseline":
+                tau_df.loc[:,r]=0
+            # Constant effect
+            elif r_parms["type"]=="constant":
+                tau_df.loc[:,r]=r_parms["tau"]
+            # Constant effect, moderated by attribute
+            elif r_parms["type"]=="constant_mod_a":
+                A_t=hist.loc[:,"A_"+str(t)]
+                tau_map=r_parms["tau_map"]
+                # tau_map maps a's to taus
+                tau_df.loc[:,r]=np.array([tau_map[a] for a in A_t])
+        return(tau_df)
+    
+    #def simulate_tau_enumerate(self):
+    #    def simulate_tau(hist, t):
+    #        tau_df=pd.DataFrame(index=hist.index)
+    #        for r in self.tau_parms["effects"].keys():
+    #            r_parms=self.tau_parms["effects"][r]
+    #            # Baseline composition - No effect
+    #            if r_parms["type"]=="baseline":
+    #                tau_df.loc[:,r]=0
+    #            # Constant effect
+    #            elif r_parms["type"]=="constant":
+    #                tau_df.loc[:,r]=r_parms["tau"]
+    #            # Constant effect, moderated by attribute
+    #            elif r_parms["type"]=="constant_mod_a":
+    #                A_t=hist.loc[:,"A_"+str(t)]
+    #                tau_map=r_parms["tau_map"]
+    #                # tau_map maps a's to taus
+    #                tau_df.loc[:,r]=np.array([tau_map[a] for a in A_t])
+    #        return(tau_df)
+    #    return(simulate_tau)
     
     # Simulate Y (observed outcome)
     def simulate_y(self, hist, tau_df, t):

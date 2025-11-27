@@ -7,6 +7,9 @@
 ####  ResultsVisualizer: Visualizes the results of the Monte Carlo experiment
 ### PROGRAMMER: Gabriel Durham (GJD)
 ### CREATED ON: 2 NOV 2025 
+### EDITS: 18 NOV 2025 (GJD): Edited to enable specifying multiple averages (over time) to estimate
+###             E.g., wanting tau hat varied averaging tau_t hats from 1,...,t_max for various t_max values
+###             Will help with time asymptotics sims (avoid having to run different simulations for each T)
 
 
 import pandas as pd
@@ -38,7 +41,9 @@ class ResultsProcessor:
         se = np.where(
             self.inf_data["type"].isin(["tau_at", "tau_t"]),
             ((self.inf_data["estimated_var"])**0.5),
-            ((self.inf_data["estimated_var"]/self.inf_data["T"])**0.5)
+            #((self.inf_data["estimated_var"]/self.inf_data["t"])**0.5)
+            # If the estimator is tau, then it was an average of 1,....,t
+            ((self.inf_data["estimated_var"]/self.inf_data["t"])**0.5)
         )
         #se = self.inf_data["estimated_var"]**0.5
         self.inf_data.loc[:, "ci_lower"] = self.inf_data.loc[:, "estimated_val"] - critical_val*se
@@ -88,6 +93,28 @@ class ResultsVisualizer:
                     std_lab = f"{round(MC_se, n_round):.{n_round}f}"
                     metric_lab = metric_lab + " ("+ std_lab + ")"
                 new_row[self.smart_capitalize(metric)] = metric_lab
+            output_table = pd.concat([output_table, new_row], ignore_index=True)
+        return output_table
+    
+    def create_basic_summary_table_verbose(self, selected_estimands=None, latex_formatting=False):
+        output_table = pd.DataFrame()
+        if selected_estimands is None:
+            selected_estimands = self.processed_results.estimands_for_inf
+        for estimand in selected_estimands:
+            # Create the label for the estimand
+            if latex_formatting:
+                new_row = pd.DataFrame({"Estimand":self.estimand_to_latex(estimand)}, index=[0])
+            else:
+                new_row = pd.DataFrame({"Estimand":estimand}, index=[0])
+            # Grab the metrics
+            for metric in self.processed_results.inf_performance[estimand].keys():
+                performance = self.processed_results.inf_performance[estimand][metric]
+                MC_est = performance["MC_est"]
+                new_row[self.smart_capitalize(metric)] = MC_est
+                if "MC_se" in performance.keys():
+                    MC_se = performance["MC_se"]
+                    new_row[self.smart_capitalize(metric)+"_MC_se"] = MC_se
+                
             output_table = pd.concat([output_table, new_row], ignore_index=True)
         return output_table
     

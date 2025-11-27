@@ -15,3 +15,4 @@ estimands:
         r1: "2-0"
         r2: "0-2"
         type: "tau"
+        t: "all"

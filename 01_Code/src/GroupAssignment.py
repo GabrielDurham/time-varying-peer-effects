@@ -5,17 +5,22 @@
 ### PURPOSE: This code defines the GroupAssignmentSimulator class, which handles randomized group formation 
 ### PROGRAMMER: Gabriel Durham (GJD)
 ### CREATED ON: 29 OCT 2025 
-
+### EDITS: 12 NOV 2025 (GJD) - Added rng argument for reproducibility
 
 import pandas as pd
 import numpy as np
 import math
 from itertools import combinations
-import random
+#import random
+from numpy.random import default_rng
 
 
 class GroupAssignmentSimulator:
-    def __init__(self, yaml_parms, H):
+    def __init__(self, yaml_parms, H, rng=None):
+        if rng is None:
+            self.rng = default_rng()
+        else:
+            self.rng = rng
         self.m=yaml_parms["m"]
         self.H=H
         self.ra_type=yaml_parms["ra_type"]
@@ -33,8 +38,6 @@ class GroupAssignmentSimulator:
                 # more realizations
                 if "preferred_groups" in yaml_parms.keys():
                     self.preferred_groups=yaml_parms["preferred_groups"]
-    
-    
 
     # Assign groups according to specified mechanism
     # Right now, have only coded up complete ra
@@ -141,7 +144,8 @@ class GroupAssignmentSimulator:
         # Reshuffle the indices for each attribute randomly then just fill in the groups
         for a in range(self.H):
             indices_a = list(hist.index[hist["A_"+str(t)]==a])
-            reshuffled_indices_by_a[a] = random.sample(indices_a, k=len(indices_a))
+            #reshuffled_indices_by_a[a] = random.sample(indices_a, k=len(indices_a))
+            reshuffled_indices_by_a[a] = list(self.rng.permutation(indices_a))
         groups_formed = []
         for group_structure in group_structures:
             group_ids = []

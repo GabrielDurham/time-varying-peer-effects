@@ -1,6 +1,6 @@
-###############################
+###########################
 ### SimulationEngine.py ###
-###############################
+###########################
 
 ### PURPOSE: This code defines the following classes:
 ####  AnalysisOverhead: Handles overhead for simulating/analyzing experiments
@@ -8,13 +8,18 @@
 ####  BaseSimulator: Iterates and simulates the necessary number of experiments
 ### PROGRAMMER: Gabriel Durham (GJD)
 ### CREATED ON: 2 NOV 2025 
-
+### EDITS: 17 NOV 2025 (GJD): Edited to avoid calling _worker function if one thread
+### EDITS: 18 NOV 2025 (GJD): Edited to enable specifying multiple averages (over time) to estimate
+###             E.g., wanting tau hat varied averaging tau_t hats from 1,...,t_max for various t_max values
+###             Will help with time asymptotics sims (avoid having to run different simulations for each T)
 
 import pandas as pd
 import numpy as np
 from itertools import product
 from scipy.stats import norm
 from ExperimentSimulation import ExperimentSimulator
+from concurrent.futures import ProcessPoolExecutor
+from numpy.random import SeedSequence, default_rng
 
 
 class AnalysisOverhead:
@@ -67,11 +72,17 @@ class AnalysisOverhead:
                                      ignore_index=True)
                 new_rows_inference = self.enumerate_single_estimand("tau_t", r, rr, a_list=None, t_list=t_list)
             elif estimand_parms["type"]=="tau":
-                new_rows = pd.concat([self.enumerate_single_estimand("tau", r, rr),
+                if "t" not in estimand_parms.keys():
+                    t_list = [self.T]
+                elif estimand_parms["t"]=="all":
+                    t_list = list(range(1,self.T+1))
+                else:
+                    t_list = estimand_parms["t"]
+                new_rows = pd.concat([self.enumerate_single_estimand("tau", r, rr, a_list=None, t_list=t_list),
                                       self.enumerate_single_estimand("tau_t", r, rr, a_list=None, t_list=list(range(1,self.T+1))),
                                       self.enumerate_single_estimand("tau_at", r, rr, list(range(self.H)), list(range(1,self.T+1)))], 
                                      ignore_index=True)
-                new_rows_inference = self.enumerate_single_estimand("tau", r, rr)
+                new_rows_inference = self.enumerate_single_estimand("tau", r, rr, a_list=None, t_list=t_list)
             estimand_df = pd.concat([estimand_df, new_rows], ignore_index=True)
             estimand_df_inference = pd.concat([estimand_df_inference, new_rows_inference], ignore_index=True)
             
@@ -82,7 +93,7 @@ class AnalysisOverhead:
     # Create a dataframe row that has the estimand name, type, r, r', a, t values
     def enumerate_single_estimand(self, estimand_type, r, rr, a_list=None, t_list=None):
         if estimand_type=="tau_at":
-            rows = list(product(["tau_at"],[r],[rr],a_list, t_list))
+            rows = list(product(["tau_at"],[r],[rr],a_list,t_list))
             estimand_data = pd.DataFrame(rows, columns=["type", "r", "rr", "a", "t"])
             estimand_data.loc[:,"estimand"] = ("tau_[" + estimand_data["a"].astype(str) + "]" 
                                             + estimand_data["t"].astype(str) + "(" 
@@ -95,8 +106,14 @@ class AnalysisOverhead:
                                                + estimand_data["r"].astype(str) + ","
                                                + estimand_data["rr"].astype(str) + ")")
         elif estimand_type=="tau":
-            estimand_label = "tau("+str(r)+","+str(rr)+")"
-            estimand_data = pd.DataFrame([{"type":"tau", "r":r, "rr":rr, "a":"", "t":"", "estimand":estimand_label}])
+            rows = list(product(["tau"],[r],[rr],[""], t_list))
+            estimand_data = pd.DataFrame(rows, columns=["type", "r", "rr", "a", "t"])
+            estimand_data.loc[:,"estimand"] = ("tau" + "(" + estimand_data["r"].astype(str) 
+                                               + "," + estimand_data["rr"].astype(str) 
+                                               + ")^" + estimand_data["t"].astype(str))
+            #estimand_data.loc[:,"estimand"] = "tau("+str(r)+","+str(rr)+")"
+            #estimand_label = "tau("+str(r)+","+str(rr)+")"
+            #estimand_data = pd.DataFrame([{"type":"tau", "r":r, "rr":rr, "a":"", "t":"", "estimand":estimand_label}])
         return estimand_data
     
     # Define the primal quantities we'll need to estimate
@@ -253,8 +270,9 @@ class ExperimentAnalyzer:
         for i in estimand_df_all.index:
             row = estimand_df_all.loc[i,:]
             if row["type"]=="tau":
-                estimators_t = estimator_df.loc[(estimator_df["type"]=="tau_t"), :] 
-                if list(np.sort(estimators_at["t"].values))!=list(range(1,self.T+t)):
+                estimators_t = estimator_df.loc[(estimator_df["type"]=="tau_t")&(estimator_df["t"]<=row["t"]), :] 
+                #if list(np.sort(estimators_at["t"].values))!=list(range(1,self.T+t)):
+                if list(np.sort(estimators_t["t"].values))!=list(range(1,row["t"]+1)):
                     ValueError("Did not estimate all necessary components for tau.")
                     
                 new_row = row.copy()
@@ -313,8 +331,11 @@ class ExperimentAnalyzer:
                                                   estimands_at["a"].map(experiment.ra_coefs[t]["w_at"])).sum()
         for i in estimand_df.index:
             if estimand_df.loc[i,"type"]=="tau":
-                estimands_t = estimand_df.loc[(estimand_df["type"]=="tau_t"), :] 
-                if list(np.sort(estimands_t["t"].values))!=list(range(1,self.T+t)):
+                t = estimand_df.loc[i, "t"]
+                #estimands_t = estimand_df.loc[(estimand_df["type"]=="tau_t"), :] 
+                estimands_t = estimand_df.loc[(estimand_df["type"]=="tau_t")&(estimand_df["t"]<=t), :] 
+                #if list(np.sort(estimands_t["t"].values))!=list(range(1,self.T+t)):
+                if list(np.sort(estimands_t["t"].values))!=list(range(1,t+1)):
                     ValueError("Did not estimate all necessary components for tau.")
                 estimand_df.loc[i, "true_val"] = estimands_t["true_val"].mean()
                 
@@ -348,8 +369,11 @@ class ExperimentAnalyzer:
                                                   (estimands_at["a"].map(experiment.ra_coefs[t]["w_at"])**2)).sum()
         for i in estimand_df.index:
             if estimand_df.loc[i,"type"]=="tau":
-                estimands_t = estimand_df.loc[(estimand_df["type"]=="tau_t"), :] 
-                if list(np.sort(estimands_t["t"].values))!=list(range(1,self.T+t)):
+                t = estimand_df.loc[i, "t"]
+                #estimands_t = estimand_df.loc[(estimand_df["type"]=="tau_t"), :]
+                estimands_t = estimand_df.loc[(estimand_df["type"]=="tau_t")&(estimand_df["t"]<=t), :] 
+                #if list(np.sort(estimands_t["t"].values))!=list(range(1,self.T+t)):
+                if list(np.sort(estimands_t["t"].values))!=list(range(1,t+1)):
                     ValueError("Did not estimate all necessary components for tau.")
                 estimand_df.loc[i, "true_var"] = estimands_t["true_var"].mean()
     
@@ -461,3 +485,84 @@ class BaseSimulator:
             results_list.append(iteration_results)
         estimator_results = pd.concat(results_list, ignore_index = True)
         return estimator_results
+    
+    
+# This class iterates and produces a list of simulation results
+class BaseSimulator:
+    def __init__(self, analysis_overhead, outcome_simulator, attribute_simulator, group_simulator):
+        self.analysis_overhead = analysis_overhead
+        self.outcome_simulator = outcome_simulator
+        self.attribute_simulator = attribute_simulator
+        self.group_simulator = group_simulator
+        self.n = self.analysis_overhead.n
+        self.T = self.analysis_overhead.T
+    def create_iter_blocks(self, n_iter, n_thread):
+        iter_blocks = []
+        min_block_size = int(np.floor(n_iter/n_thread))
+        remainder = n_iter%n_thread
+        start_index = 0
+        #block_number = 0
+        #while start_index<n_iter:
+        for block_number in range(n_thread):
+            end_index = start_index + min_block_size
+            if block_number < remainder:
+                end_index+=1
+            iter_blocks.append([i for i in range(start_index, end_index)])
+            #block_number+=1
+            start_index = end_index
+        return iter_blocks
+        
+    def run_sims(self, n_iter, n_thread = 1, seed=None):
+        # Set up parallel structure 
+        ## Won't split an iteration into multiple threads, so can have at most n_iter threads goin' on
+        n_thread = min(n_thread, n_iter)
+        # Create a list of random number streams derived from a (potential) master seed
+        if not seed:
+            master_seed_seq = SeedSequence()
+        else:
+            master_seed_seq = SeedSequence(seed)
+        block_seqs = master_seed_seq.spawn(n_thread)
+        iter_blocks = self.create_iter_blocks(n_iter, n_thread)
+        # Package arguments for each thread
+        args_list = [(self, iter_blocks[thread], block_seqs[thread]) for thread in range(n_thread)]
+        if n_thread == 1:
+            # No multiprocessing
+            #thread_outputs = [_worker_run_block(args_list[0])]
+            thread_outputs = [self.run_sims_one_thread(iter_blocks[0], default_rng(block_seqs[0]))]
+        else:
+            # Parallel over blocks
+            with ProcessPoolExecutor(max_workers=n_thread) as pool:
+                thread_outputs = list(pool.map(_worker_run_block, args_list))
+        return pd.concat(thread_outputs, ignore_index=True)
+    
+    
+    def run_sims_one_thread(self, iter_list, rng):
+        if not rng:
+            rng = default_rng()
+        results_list = []
+        for iteration in iter_list:
+            new_experiment = ExperimentSimulator(n=self.n, T=self.T, 
+                                                 outcome_simulator=self.outcome_simulator, 
+                                                 attribute_simulator=self.attribute_simulator, 
+                                                 group_simulator=self.group_simulator,
+                                                 rng=rng)
+            new_experiment.simulate_experiment()
+            iteration_results = ExperimentAnalyzer(self.analysis_overhead, new_experiment).estimator_data
+            iteration_results.loc[:,"iteration"] = iteration
+            results_list.append(iteration_results)
+        estimator_results = pd.concat(results_list, ignore_index = True)
+        return estimator_results
+    
+# Worker block for parallelizing base simulator
+def _worker_run_block(args):
+        sim_obj, iter_list, seed_seq = args
+        # Create per-worker RNG
+        if not seed_seq:
+            rng = default_rng()
+        else:
+            rng = default_rng(seed_seq)
+
+        # Call the *method* on the simulator object
+        return sim_obj.run_sims_one_thread(iter_list, rng)
+    
+    

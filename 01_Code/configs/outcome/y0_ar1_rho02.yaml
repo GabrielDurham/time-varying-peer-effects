@@ -1,0 +1,6 @@
+outcome_transition_type: ar1
+rho: 0.2
+mean: 77
+error_dist:
+    type: normal
+    sd: 5

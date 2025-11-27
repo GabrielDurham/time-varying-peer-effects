@@ -6,14 +6,16 @@
 ### PROGRAMMER: Gabriel Durham (GJD)
 ### CREATED ON: 29 OCT 2025 
 ### EDITS: 3 NOV 2025 (GJD) - Set self.hist = self.hist.copy() every 10th time step to defrag history
+###        12 NOV 2025 (GJD) - Added rng argument for reproducibility
 
 import pandas as pd
 import numpy as np
+from numpy.random import default_rng
 
 
 
 class ExperimentSimulator:
-    def __init__(self, n, T, outcome_simulator, attribute_simulator, group_simulator):
+    def __init__(self, n, T, outcome_simulator, attribute_simulator, group_simulator, rng=None):    
         self.n = n
         self.T = T
         
@@ -21,9 +23,17 @@ class ExperimentSimulator:
         self.attribute_simulator = attribute_simulator
         self.group_simulator = group_simulator
         
+        if rng is not None:
+            self.rng = rng
+            self.outcome_simulator.rng = rng
+            self.attribute_simulator.rng = rng
+            self.group_simulator.rng = rng
+            
+        
         self.hist = pd.DataFrame(index=range(self.n))
         self.tau_dfs = {}
         self.ra_coefs = {}
+        
     
     def simulate_time_step(self, t):
         # Simulate attributes

@@ -1,6 +1,14 @@
 # Ignore scratch work
 01_Code/testbed/Scratch_Work/
 
+# Ignore data
+02_Data/*
+# Keep the folder though
+!02_Data/.gitkeep
+
+# Ignore output archive
+03_Output/Archive
+
 # Ignore ipynb_checkpoints
 .ipynb_checkpoints/
 

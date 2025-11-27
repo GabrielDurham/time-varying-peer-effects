@@ -5,13 +5,14 @@ estimands:
         r2: "0-2"
         type: "tau_at"
         a: "all"
-        t: [1,2,3]
+        t: "all"
     estimand_1:
         r1: "2-0"
         r2: "0-2"
         type: "tau_t"
-        t: [2,3,4]
+        t: "all"
     estimand_2:
         r1: "2-0"
         r2: "0-2"
         type: "tau"
+        t: "all"

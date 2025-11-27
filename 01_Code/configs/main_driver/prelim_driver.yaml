@@ -1,0 +1,67 @@
+
+# Base tables - Increasing n
+prelim_base_n66_T2:
+    run_simulation: 1
+    n: 66
+    T: 2
+    n_iter: 10
+    seed: 3318
+    configs: 
+        attribute: "y_rank_2_groups.yaml"
+        randomization: "complete_ra_balanced.yaml"
+        outcome: 
+            y0: "y0_ar1_rho01.yaml"
+            tau: "constant_H2K2.yaml"
+        analysis: "complete_m3H2_20_vs_02_T2.yaml"
+prelim_base_n99_T2:
+    run_simulation: 1
+    n: 99
+    T: 2
+    n_iter: 10
+    seed: 657
+    configs: 
+        attribute: "y_rank_2_groups.yaml"
+        randomization: "complete_ra_balanced.yaml"
+        outcome: 
+            y0: "y0_ar1_rho01.yaml"
+            tau: "constant_H2K2.yaml"
+        analysis: "complete_m3H2_20_vs_02_T2.yaml"
+prelim_base_n198_T2:
+    run_simulation: 1
+    n: 198
+    T: 2
+    n_iter: 10
+    seed: 3411
+    configs: 
+        attribute: "y_rank_2_groups.yaml"
+        randomization: "complete_ra_balanced.yaml"
+        outcome: 
+            y0: "y0_ar1_rho01.yaml"
+            tau: "constant_H2K2.yaml"
+        analysis: "complete_m3H2_20_vs_02_T2.yaml"
+prelim_base_n300_T2:
+    run_simulation: 1
+    n: 300
+    T: 2
+    n_iter: 10
+    seed: 4241
+    configs: 
+        attribute: "y_rank_2_groups.yaml"
+        randomization: "complete_ra_balanced.yaml"
+        outcome: 
+            y0: "y0_ar1_rho01.yaml"
+            tau: "constant_H2K2.yaml"
+        analysis: "complete_m3H2_20_vs_02_T2.yaml"
+prelim_base_n600_T2:
+    run_simulation: 1
+    n: 600
+    T: 2
+    n_iter: 10
+    seed: 3510
+    configs: 
+        attribute: "y_rank_2_groups.yaml"
+        randomization: "complete_ra_balanced.yaml"
+        outcome: 
+            y0: "y0_ar1_rho01.yaml"
+            tau: "constant_H2K2.yaml"
+        analysis: "complete_m3H2_20_vs_02_T2.yaml"
